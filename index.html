@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Top spend creative - Spend vs CPI</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #fff; padding: 24px; }
+  h2 { font-size: 18px; font-weight: 500; margin-bottom: 4px; }
+  p.sub { color: #666; font-size: 13px; margin-top: 0; margin-bottom: 20px; }
+  .legend { display: flex; gap: 16px; margin-bottom: 12px; font-size: 12px; color: #444; }
+  .legend span { display: flex; align-items: center; gap: 4px; }
+  .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  #chartWrap { position: relative; width: 100%; max-width: 900px; height: 480px; }
+</style>
+</head>
+<body>
+<h2>Top spend creative — Spend vs CPI</h2>
+<p class="sub">Kich thuoc bubble = Spend. Mau = Platform (Android / iOS).</p>
+<div class="legend">
+  <span><span class="swatch" style="background:#2a78d6"></span>Android</span>
+  <span><span class="swatch" style="background:#eb6834"></span>iOS</span>
+</div>
+<div id="chartWrap">
+  <canvas id="bubbleChart"></canvas>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const data = [
+{"name":"Mac do theo trend cu","platform":"Android","spend":3780.23,"cpi":0.0914},
+{"name":"Con anh em su dung thiet bi (AND)","platform":"Android","spend":2976.72,"cpi":0.1148},
+{"name":"tinh huong cuu dong doi","platform":"Android","spend":2581.15,"cpi":0.0937},
+{"name":"VID-VER-096724-v1 (AND)","platform":"Android","spend":2150.33,"cpi":0.0847},
+{"name":"Anh em da thu qua combo sieu hot","platform":"Android","spend":2047.32,"cpi":0.0924},
+{"name":"Con anh em su dung thiet bi (iOS)","platform":"iOS","spend":1514.00,"cpi":0.0857},
+{"name":"VID-SQR-096734-v11 (AND)","platform":"Android","spend":1484.02,"cpi":0.0724},
+{"name":"VID-VER-096727-v4 (AND)","platform":"Android","spend":1420.48,"cpi":0.0679},
+{"name":"VID-SQR-096734-v11 (iOS)","platform":"iOS","spend":1415.11,"cpi":0.0898},
+{"name":"VID-VER-096725-v2 (AND)","platform":"Android","spend":1311.72,"cpi":0.0770},
+{"name":"VID-VER-096725-v2 (iOS)","platform":"iOS","spend":1116.24,"cpi":0.0819},
+{"name":"VID-VER-096724-v1 (iOS)","platform":"iOS","spend":1060.29,"cpi":0.0739},
+{"name":"Anh em da biet cach tan dung Be","platform":"Android","spend":1002.84,"cpi":0.0917},
+{"name":"Anh em co goi y combo nao khac","platform":"Android","spend":853.96,"cpi":0.0981},
+{"name":"VID-VER-096729-v6 (AND)","platform":"Android","spend":822.21,"cpi":0.0916}
+];
+
+const colorFor = p => p === 'Android' ? '#2a78d6' : '#eb6834';
+const maxSpend = Math.max(...data.map(d => d.spend));
+const radiusFor = s => 6 + (s / maxSpend) * 22;
+
+const points = data.map(d => ({
+  x: d.spend,
+  y: d.cpi,
+  r: radiusFor(d.spend),
+  name: d.name,
+  platform: d.platform
+}));
+
+new Chart(document.getElementById('bubbleChart'), {
+  type: 'bubble',
+  data: {
+    datasets: [{
+      label: 'Creative',
+      data: points,
+      backgroundColor: points.map(p => colorFor(p.platform) + '99'),
+      borderColor: points.map(p => colorFor(p.platform)),
+      borderWidth: 1.5
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    layout: { padding: 20 },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx) => {
+            const p = ctx.raw;
+            return [p.name, 'Spend: $' + p.x.toLocaleString(), 'CPI: $' + p.y.toFixed(4)];
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        title: { display: true, text: 'Spend ($)' },
+        min: 0,
+        max: maxSpend * 1.15,
+        grid: { color: '#e1e0d9' }
+      },
+      y: {
+        title: { display: true, text: 'CPI ($)' },
+        min: 0.06,
+        max: 0.12,
+        grid: { color: '#e1e0d9' }
+      }
+    }
+  }
+});
+</script>
+</body>
+</html>
