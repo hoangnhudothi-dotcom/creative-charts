@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Creative Performance Dashboard</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #fff; padding: 24px; max-width: 980px; margin: 0 auto; }
+  h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+  h2 { font-size: 18px; font-weight: 500; margin-bottom: 4px; }
+  p.sub { color: #666; font-size: 13px; margin-top: 0; margin-bottom: 8px; }
+  p.hint { color: #999; font-size: 12px; margin-top: 0; margin-bottom: 16px; }
+
+  .tabs { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid #e0e0e0; }
+  .tab-btn { padding: 10px 18px; font-size: 14px; font-weight: 500; color: #888; background: none; border: none;
+             border-bottom: 2px solid transparent; cursor: pointer; }
+  .tab-btn.active { color: #222; border-bottom: 2px solid #333; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .legend-row { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 16px; font-size: 12px; color: #444; }
+  .legend-row span { display: flex; align-items: center; gap: 4px; }
+  .swatch { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .chartWrap { position: relative; width: 100%; height: 500px; margin-bottom: 20px; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 12.5px; margin-bottom: 40px; }
+  th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid #eee; }
+  th { color: #888; font-weight: 500; border-bottom: 1px solid #ccc; }
+  td.num { width: 24px; text-align: center; }
+  .badge { display: inline-block; width: 20px; height: 20px; border-radius: 50%; color: #fff; font-weight: 700; font-size: 11px; text-align: center; line-height: 20px; }
+  tr.creative-row { cursor: pointer; }
+  tr.creative-row:hover { background: #fafafa; }
+  td.ct-official { color: #757575; font-weight: 600; }
+  td.ct-ob53 { color: #B8960C; font-weight: 600; }
+  td.platform-and { color: #B8960C; font-weight: 600; }
+  td.platform-ios { color: #6b6b6b; font-weight: 600; }
+</style>
+</head>
+<body>
+<h1>Creative Performance Dashboard</h1>
+<p class="sub">Spend vs CPI — click vao bubble hoac dong bang de mo Google Drive.</p>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="tabTop">OB53 vs. Top spend creative</button>
+  <button class="tab-btn" data-tab="tabOB53">OB53 by Platform</button>
+</div>
+
+<!-- ============ TAB 1: TOP SPEND CREATIVE ============ -->
+<div id="tabTop" class="tab-panel active">
+  <h2>Top Spend Creative</h2>
+  <p class="sub">Kich thuoc bubble = Spend. Mau = Content type (Official = xam, OB53 creator = vang).</p>
+  <p class="hint">So thu tu tren bubble tuong ung voi bang ben duoi.</p>
+  <div class="legend-row">
+    <span><span class="swatch" style="background:#9e9e9e"></span>Official content</span>
+    <span><span class="swatch" style="background:#FFD500"></span>OB53 creator</span>
+  </div>
+  <div class="chartWrap"><canvas id="chartTop"></canvas></div>
+  <table>
+    <thead><tr><th></th><th>Name</th><th>Content type</th><th>Platform</th><th>Spend ($)</th><th>CPI ($)</th></tr></thead>
+    <tbody id="tableTop"></tbody>
+  </table>
+</div>
+
+<!-- ============ TAB 2: OB53 BY PLATFORM ============ -->
+<div id="tabOB53" class="tab-panel">
+  <h2>OB53 Creator Content — by Platform</h2>
+  <p class="sub">Kich thuoc bubble = Spend. Mau = Platform (Android = vang, iOS = xam).</p>
+  <p class="hint">So thu tu tren bubble tuong ung voi bang ben duoi.</p>
+  <div class="legend-row">
+    <span><span class="swatch" style="background:#FFD500"></span>Android</span>
+    <span><span class="swatch" style="background:#9e9e9e"></span>iOS</span>
+  </div>
+  <div class="chartWrap"><canvas id="chartOB53"></canvas></div>
+  <table>
+    <thead><tr><th></th><th>Content</th><th>Platform</th><th>Spend ($)</th><th>CPI ($)</th></tr></thead>
+    <tbody id="tableOB53"></tbody>
+  </table>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<script>
+Chart.register(ChartDataLabels);
+const driveViewUrl = id => `https://drive.google.com/file/d/${id}/view`;
+const openLink = (link) => {
+  const win = window.open(link, '_blank', 'noopener,noreferrer');
+  if (!win || win.closed || typeof win.closed === 'undefined') window.location.href = link;
+};
+
+// ---------- Tabs ----------
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ================= TAB 1 DATA: TOP SPEND CREATIVE =================
+const dataTop = [
+{"name":"Mac do theo trend cu","contentType":"Official","platform":"Android","spend":3780.23,"cpi":0.09144685277468673,"driveId":"1E1GL3hiswoI3wsrONP1mC1H31pYiDada"},
+{"name":"Con anh em su dung thiet bi","contentType":"Official","platform":"Android","spend":2976.72,"cpi":0.11477617119722382,"driveId":"1_bHIKuyLOGSk85wnhpjr6I3X6UyHrMOI"},
+{"name":"tinh huong cuu dong doi","contentType":"Official","platform":"Android","spend":2581.15,"cpi":0.09373388531793587,"driveId":"1dhDkq0vAyeQJeuVSRuDPmgzer2569C0e"},
+{"name":"Highlight players' skill","contentType":"OB53 creator","platform":"Android","spend":2150.33,"cpi":0.08466199456671522,"driveId":"1gmy_7pJfrjSk4NOJbju4-9kv97q9qi5T"},
+{"name":"Anh em da thu qua combo sieu hot","contentType":"Official","platform":"Android","spend":2047.32,"cpi":0.09236307858882974,"driveId":"1hcN49lmEXfGc7Lss-ZKYISleyf1zciCd"},
+{"name":"Con anh em su dung thiet bi","contentType":"Official","platform":"iOS","spend":1514.00,"cpi":0.0857207564262258,"driveId":"1_bHIKuyLOGSk85wnhpjr6I3X6UyHrMOI"},
+{"name":"Gameplay features: 120 FPS","contentType":"OB53 creator","platform":"Android","spend":1484.02,"cpi":0.0724265495363592,"driveId":"1HD6eOgSuEF_xBgEmfvujyLcm17jf7MGF"},
+{"name":"Trendy emote","contentType":"OB53 creator","platform":"Android","spend":1420.48,"cpi":0.06791031218625998,"driveId":"1D9B5yvxrcK2lrgLowWyS0PhZmNQ_cbUq"},
+{"name":"Gameplay features: 120 FPS","contentType":"OB53 creator","platform":"iOS","spend":1415.11,"cpi":0.089779850272808,"driveId":"1HD6eOgSuEF_xBgEmfvujyLcm17jf7MGF"},
+{"name":"New feature: Horse Riding","contentType":"OB53 creator","platform":"Android","spend":1311.72,"cpi":0.07695177754311862,"driveId":"1d9SZY5iubbP8oESDDH8mhO5BVzFQ7o-m"},
+{"name":"New feature: Horse Riding","contentType":"OB53 creator","platform":"iOS","spend":1116.24,"cpi":0.08188380281690141,"driveId":"1d9SZY5iubbP8oESDDH8mhO5BVzFQ7o-m"},
+{"name":"Anh em da biet cach tan dung Be","contentType":"Official","platform":"Android","spend":1002.84,"cpi":0.09171757819645143,"driveId":"11gUQPWzc4ZJlEEns1UvRDcRMXK0-Dpfo"},
+{"name":"Highlight players' skill","contentType":"OB53 creator","platform":"iOS","spend":1060.29,"cpi":0.07385692393424352,"driveId":"1gmy_7pJfrjSk4NOJbju4-9kv97q9qi5T"},
+{"name":"Anh em co goi y combo nao khac","contentType":"Official","platform":"Android","spend":853.96,"cpi":0.09805488575037317,"driveId":"1A5XG68gUgBTHza52xoK8qPJ-T9h-CzBN"},
+{"name":"New feature: Streak","contentType":"OB53 creator","platform":"Android","spend":822.21,"cpi":0.09158053018489641,"driveId":"1PX-nPIWZ-xOWdn-ib-ONffZd6zre0LIt"},
+{"name":"Trendy emote","contentType":"OB53 creator","platform":"iOS","spend":683.84,"cpi":0.0945575221238938,"driveId":"1D9B5yvxrcK2lrgLowWyS0PhZmNQ_cbUq"},
+{"name":"Special features in OB53","contentType":"OB53 creator","platform":"Android","spend":662.05,"cpi":0.09871030266885343,"driveId":"1PX-nPIWZ-xOWdn-ib-ONffZd6zre0LIt"},
+{"name":"New feature: Streak","contentType":"OB53 creator","platform":"iOS","spend":436.77,"cpi":0.09439593689215474,"driveId":"1PX-nPIWZ-xOWdn-ib-ONffZd6zre0LIt"},
+{"name":"Special features in OB53","contentType":"OB53 creator","platform":"iOS","spend":327.13,"cpi":0.11826825741142444,"driveId":"1WuzxR8ebhZEjpjaHCNuBEiw02eaPwUX2"},
+{"name":"Love twist","contentType":"OB53 creator","platform":"Android","spend":138.21,"cpi":0.12155672823218998,"driveId":"11iwmvklp_dzJ7ATaUXjp29TF1-HJYJUt"}
+];
+
+const OFFICIAL_FILL = '#9e9e9e', OFFICIAL_BORDER = '#6b6b6b';
+const OB53_FILL = '#FFD500', OB53_BORDER = '#B8960C';
+const fillForCT = ct => ct === 'OB53 creator' ? OB53_FILL : OFFICIAL_FILL;
+const borderForCT = ct => ct === 'OB53 creator' ? OB53_BORDER : OFFICIAL_BORDER;
+const textForCT = ct => ct === 'OB53 creator' ? '#5c4a00' : '#ffffff';
+
+const maxSpendTop = Math.max(...dataTop.map(d => d.spend));
+const radiusForTop = s => 7 + (s / maxSpendTop) * 25;
+
+const pointsTop = dataTop.map((d, i) => ({
+  x: d.spend, y: d.cpi, r: radiusForTop(d.spend), idx: i + 1,
+  name: d.name, contentType: d.contentType, platform: d.platform, link: driveViewUrl(d.driveId)
+}));
+
+const tbodyTop = document.getElementById('tableTop');
+pointsTop.forEach(p => {
+  const tr = document.createElement('tr');
+  tr.className = 'creative-row';
+  tr.onclick = () => openLink(p.link);
+  tr.innerHTML = `
+    <td class="num"><span class="badge" style="background:${fillForCT(p.contentType)};color:${textForCT(p.contentType)}">${p.idx}</span></td>
+    <td>${p.name}</td>
+    <td class="${p.contentType === 'OB53 creator' ? 'ct-ob53' : 'ct-official'}">${p.contentType}</td>
+    <td>${p.platform}</td>
+    <td>${p.x.toLocaleString(undefined, {maximumFractionDigits:0})}</td>
+    <td>${p.y.toFixed(2)}</td>
+  `;
+  tbodyTop.appendChild(tr);
+});
+
+new Chart(document.getElementById('chartTop'), {
+  type: 'bubble',
+  data: { datasets: [{
+    label: 'Creative', data: pointsTop,
+    backgroundColor: pointsTop.map(p => fillForCT(p.contentType) + 'E6'),
+    borderColor: pointsTop.map(p => borderForCT(p.contentType)),
+    borderWidth: 1.5
+  }]},
+  options: {
+    responsive: true, maintainAspectRatio: false, layout: { padding: 20 },
+    onClick: (evt, els) => { if (els.length) openLink(pointsTop[els[0].index].link); },
+    onHover: (evt, els) => { evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: (ctx) => {
+        const p = ctx.raw;
+        return ['#' + p.idx + ' ' + p.name, 'Content: ' + p.contentType, 'Platform: ' + p.platform,
+                'Spend: $' + p.x.toLocaleString(), 'CPI: $' + p.y.toFixed(2), 'Click de mo Drive'];
+      }}},
+      datalabels: {
+        display: true, color: (ctx) => textForCT(ctx.dataset.data[ctx.dataIndex].contentType),
+        font: { size: 11, weight: '700' }, anchor: 'center', align: 'center',
+        formatter: (v) => v.idx
+      }
+    },
+    scales: {
+      x: { title: { display: true, text: 'Spend ($)' }, min: 0, max: maxSpendTop * 1.15, grid: { color: '#e1e0d9' } },
+      y: { title: { display: true, text: 'CPI ($)' }, min: 0.06, max: 0.13, grid: { color: '#e1e0d9' } }
+    }
+  }
+});
+
+// ================= TAB 2 DATA: OB53 BY PLATFORM =================
+const dataOB53 = [
+{"content":"Highlight players' skill","platform":"Android","spend":2150.33,"cpi":0.08466199456671522,"driveId":"1gmy_7pJfrjSk4NOJbju4-9kv97q9qi5T"},
+{"content":"Gameplay features: 120 FPS","platform":"Android","spend":1484.02,"cpi":0.0724265495363592,"driveId":"1HD6eOgSuEF_xBgEmfvujyLcm17jf7MGF"},
+{"content":"Trendy emote","platform":"Android","spend":1420.48,"cpi":0.06791031218625998,"driveId":"1D9B5yvxrcK2lrgLowWyS0PhZmNQ_cbUq"},
+{"content":"Gameplay features: 120 FPS","platform":"iOS","spend":1415.11,"cpi":0.089779850272808,"driveId":"1HD6eOgSuEF_xBgEmfvujyLcm17jf7MGF"},
+{"content":"New feature: Horse Riding","platform":"Android","spend":1311.72,"cpi":0.07695177754311862,"driveId":"1d9SZY5iubbP8oESDDH8mhO5BVzFQ7o-m"},
+{"content":"New feature: Horse Riding","platform":"iOS","spend":1116.24,"cpi":0.08188380281690141,"driveId":"1d9SZY5iubbP8oESDDH8mhO5BVzFQ7o-m"},
+{"content":"Highlight players' skill","platform":"iOS","spend":1060.29,"cpi":0.07385692393424352,"driveId":"1gmy_7pJfrjSk4NOJbju4-9kv97q9qi5T"},
+{"content":"New feature: Streak","platform":"Android","spend":822.21,"cpi":0.09158053018489641,"driveId":"1PX-nPIWZ-xOWdn-ib-ONffZd6zre0LIt"},
+{"content":"Trendy emote","platform":"iOS","spend":683.84,"cpi":0.0945575221238938,"driveId":"1D9B5yvxrcK2lrgLowWyS0PhZmNQ_cbUq"},
+{"content":"Special features in OB53","platform":"Android","spend":662.05,"cpi":0.09871030266885343,"driveId":"1PX-nPIWZ-xOWdn-ib-ONffZd6zre0LIt"},
+{"content":"New feature: Streak","platform":"iOS","spend":436.77,"cpi":0.09439593689215474,"driveId":"1PX-nPIWZ-xOWdn-ib-ONffZd6zre0LIt"},
+{"content":"Special features in OB53","platform":"iOS","spend":327.13,"cpi":0.11826825741142444,"driveId":"1WuzxR8ebhZEjpjaHCNuBEiw02eaPwUX2"},
+{"content":"Love twist","platform":"Android","spend":138.21,"cpi":0.12155672823218998,"driveId":"11iwmvklp_dzJ7ATaUXjp29TF1-HJYJUt"}
+];
+
+const AND_FILL = '#FFD500', AND_BORDER = '#B8960C';
+const IOS_FILL = '#9e9e9e', IOS_BORDER = '#6b6b6b';
+const fillForPlat = p => p === 'Android' ? AND_FILL : IOS_FILL;
+const borderForPlat = p => p === 'Android' ? AND_BORDER : IOS_BORDER;
+const textForPlat = p => p === 'Android' ? '#5c4a00' : '#ffffff';
+
+const maxSpendOB53 = Math.max(...dataOB53.map(d => d.spend));
+const radiusForOB53 = s => 8 + (s / maxSpendOB53) * 28;
+
+const pointsOB53 = dataOB53.map((d, i) => ({
+  x: d.spend, y: d.cpi, r: radiusForOB53(d.spend), idx: i + 1,
+  content: d.content, platform: d.platform, link: driveViewUrl(d.driveId)
+}));
+
+const tbodyOB53 = document.getElementById('tableOB53');
+pointsOB53.forEach(p => {
+  const tr = document.createElement('tr');
+  tr.className = 'creative-row';
+  tr.onclick = () => openLink(p.link);
+  tr.innerHTML = `
+    <td class="num"><span class="badge" style="background:${fillForPlat(p.platform)};color:${textForPlat(p.platform)}">${p.idx}</span></td>
+    <td>${p.content}</td>
+    <td class="${p.platform === 'Android' ? 'platform-and' : 'platform-ios'}">${p.platform}</td>
+    <td>${p.x.toLocaleString(undefined, {maximumFractionDigits:0})}</td>
+    <td>${p.y.toFixed(2)}</td>
+  `;
+  tbodyOB53.appendChild(tr);
+});
+
+new Chart(document.getElementById('chartOB53'), {
+  type: 'bubble',
+  data: { datasets: [{
+    label: 'Creative', data: pointsOB53,
+    backgroundColor: pointsOB53.map(p => fillForPlat(p.platform) + 'E6'),
+    borderColor: pointsOB53.map(p => borderForPlat(p.platform)),
+    borderWidth: 1.5
+  }]},
+  options: {
+    responsive: true, maintainAspectRatio: false, layout: { padding: 20 },
+    onClick: (evt, els) => { if (els.length) openLink(pointsOB53[els[0].index].link); },
+    onHover: (evt, els) => { evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: (ctx) => {
+        const p = ctx.raw;
+        return ['#' + p.idx + ' ' + p.content, 'Platform: ' + p.platform,
+                'Spend: $' + p.x.toLocaleString(), 'CPI: $' + p.y.toFixed(2), 'Click de mo Drive'];
+      }}},
+      datalabels: {
+        display: true, color: (ctx) => textForPlat(ctx.dataset.data[ctx.dataIndex].platform),
+        font: { size: 11, weight: '700' }, anchor: 'center', align: 'center',
+        formatter: (v) => v.idx
+      }
+    },
+    scales: {
+      x: { title: { display: true, text: 'Spend ($)' }, min: 0, max: maxSpendOB53 * 1.15, grid: { color: '#e1e0d9' } },
+      y: { title: { display: true, text: 'CPI ($)' }, min: 0.055, max: 0.135, grid: { color: '#e1e0d9' } }
+    }
+  }
+});
+</script>
+</body>
+</html>
